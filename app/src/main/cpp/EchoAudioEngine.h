@@ -58,9 +58,9 @@ private:
     int32_t recordingDeviceId_ = AAUDIO_UNSPECIFIED;
     int32_t playbackDeviceId_ = AAUDIO_UNSPECIFIED;
     aaudio_format_t format_ = AAUDIO_FORMAT_PCM_I16;
-    int32_t sampleRate_;
+    int32_t sampleRate_ = 8000;
     int32_t inputChannelCount_ = kMonoChannelCount;
-    int32_t outputChannelCount_ = kStereoChannelCount;
+    int32_t outputChannelCount_ = kMonoChannelCount;
     AAudioStream *recordingStream_ = nullptr;
     AAudioStream *playStream_ = nullptr;
     int32_t framesPerBurst_;

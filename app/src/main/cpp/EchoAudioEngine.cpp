@@ -245,6 +245,7 @@ void EchoAudioEngine::setupRecordingStreamParameters(AAudioStreamBuilder *builde
                                                      bool isOnlyRecording) {
     AAudioStreamBuilder_setDeviceId(builder, recordingDeviceId_);
     AAudioStreamBuilder_setDirection(builder, AAUDIO_DIRECTION_INPUT);
+    LOGI("设置参数时候的SampleRate: %d", sampleRate_);
     AAudioStreamBuilder_setSampleRate(builder, sampleRate_);
     AAudioStreamBuilder_setChannelCount(builder, inputChannelCount_);
     setupCommonStreamParameters(builder);
@@ -255,6 +256,7 @@ void EchoAudioEngine::setupRecordingStreamParameters(AAudioStreamBuilder *builde
         AAudioStreamBuilder_setErrorCallback(builder, ::errorCallback, this);
     }
 }
+
 
 /**
  * Sets the stream parameters which are specific to playback, including device id and the
@@ -267,7 +269,7 @@ EchoAudioEngine::setupPlaybackStreamParameters(AAudioStreamBuilder *builder, boo
     AAudioStreamBuilder_setDeviceId(builder, playbackDeviceId_);
     AAudioStreamBuilder_setDirection(builder, AAUDIO_DIRECTION_OUTPUT);
     AAudioStreamBuilder_setChannelCount(builder, outputChannelCount_);
-
+    AAudioStreamBuilder_setSampleRate(builder, sampleRate_);
     // The :: here indicates that the function is in the global namespace
     // i.e. *not* EchoAudioEngine::dataCallback, but dataCallback defined at the top of this class
     setupCommonStreamParameters(builder);
@@ -375,7 +377,7 @@ aaudio_data_callback_result_t EchoAudioEngine::dataCallback(AAudioStream *stream
             frameCount = AAudioStream_read(recordingStream_, audioData, numFrames,
                                            static_cast<int64_t>(0));
 
-            ConvertMonoToStereo(static_cast<int16_t *>(audioData), frameCount);
+          //  ConvertMonoToStereo(static_cast<int16_t *>(audioData), frameCount);
 
             audioEffect_.process(static_cast<int16_t *>(audioData), outputChannelCount_,
                                  frameCount);

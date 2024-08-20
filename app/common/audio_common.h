@@ -25,7 +25,7 @@
 #define NANOS_PER_SECOND 1000000000L
 #define NANOS_PER_MILLISECOND 1000000L
 
-constexpr int kMonoChannelCount = 2;
+constexpr int kMonoChannelCount = 1;
 constexpr int kStereoChannelCount = 2;
 
 uint16_t SampleFormatToBpp(aaudio_format_t format);
