@@ -4,6 +4,12 @@
 #include <audio_common.h>
 #include "EchoAudioEngine.h"
 #include "wavCode.h"
+#include "jni.h"
+#include "netinet/in.h"
+#include <unistd.h>  // 包含 close 函数
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 
 
 /**
@@ -245,7 +251,6 @@ void EchoAudioEngine::setupRecordingStreamParameters(AAudioStreamBuilder *builde
                                                      bool isOnlyRecording) {
     AAudioStreamBuilder_setDeviceId(builder, recordingDeviceId_);
     AAudioStreamBuilder_setDirection(builder, AAUDIO_DIRECTION_INPUT);
-    LOGI("设置参数时候的SampleRate: %d", sampleRate_);
     AAudioStreamBuilder_setSampleRate(builder, sampleRate_);
     AAudioStreamBuilder_setChannelCount(builder, inputChannelCount_);
     setupCommonStreamParameters(builder);
@@ -377,7 +382,7 @@ aaudio_data_callback_result_t EchoAudioEngine::dataCallback(AAudioStream *stream
             frameCount = AAudioStream_read(recordingStream_, audioData, numFrames,
                                            static_cast<int64_t>(0));
 
-          //  ConvertMonoToStereo(static_cast<int16_t *>(audioData), frameCount);
+            //  ConvertMonoToStereo(static_cast<int16_t *>(audioData), frameCount);
 
             audioEffect_.process(static_cast<int16_t *>(audioData), outputChannelCount_,
                                  frameCount);
@@ -474,7 +479,7 @@ void EchoAudioEngine::stopRecord() {
     closeAllStreams(); // closeRecordStreams();
     LOGI("AAudioEngineCPP %s", "record fclose");
     fclose(recordFile);
-    wavCode::pcvToWav(recordPath, inputChannelCount_, 48000, 16, recordPath);
+    wavCode::pcvToWav(recordPath, inputChannelCount_, sampleRate_, 16, recordPath);
 }
 
 void EchoAudioEngine::startRecord(const char *path) {
@@ -518,6 +523,8 @@ aaudio_data_callback_result_t EchoAudioEngine::dataToRecordCallback(AAudioStream
         if ((logging_flag++) % 100 == 0) {
             LOGI("AAudioEngineCPP recordIng, numFrames: %d.", numFrames);
         }
+        sendDataToJava(audioData, numFrames);  // 将数据回调到Java层
+
         return AAUDIO_CALLBACK_RESULT_CONTINUE;
     } else {
         LOGI("AAudioEngineCPP isRecordIng status:%d", isRecordIng);
@@ -525,7 +532,7 @@ aaudio_data_callback_result_t EchoAudioEngine::dataToRecordCallback(AAudioStream
 
     wavCode wav;
     // wav = reinterpret_cast<wavCode *>(NULL);
-    wav.pcvToWav(recordPath, inputChannelCount_, 48000, 16, recordPath);
+    wav.pcvToWav(recordPath, inputChannelCount_, sampleRate_, 16, recordPath);
     return AAUDIO_CALLBACK_RESULT_STOP;
 }
 
@@ -605,4 +612,38 @@ void EchoAudioEngine::resetPlayStreams() {
         // active. This is probably because we received successive "stream disconnected" events.
         // Internal issue b/63087953
     }
+}
+
+JNIEnv *EchoAudioEngine::getJNIEnv() {
+    JNIEnv *env  = nullptr;
+    if (javaVM){
+        javaVM->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
+    }
+    return env;
+}
+
+void EchoAudioEngine::sendDataToJava(const void *audioData, size_t numFrames) {
+    JNIEnv* env = getJNIEnv();
+    if (!env || !jObj) {
+        return;
+    }
+
+    jclass callbackClass = env->GetObjectClass(jObj);
+    if (!callbackClass) {
+        return;
+    }
+
+    jmethodID callbackMethod = env->GetMethodID(callbackClass, "onAudioData", "([B)V");
+    if (!callbackMethod) {
+        return;
+    }
+    // Convert PCM data to Java byte array
+    jbyteArray byteArray = env->NewByteArray(numFrames * sizeof(int16_t));
+    if (!byteArray) {
+        return;
+    }
+
+    env->SetByteArrayRegion(byteArray, 0, numFrames * sizeof(int16_t), reinterpret_cast<const jbyte*>(audioData));
+    env->CallVoidMethod(jObj, callbackMethod, byteArray);
+    env->DeleteLocalRef(byteArray);
 }

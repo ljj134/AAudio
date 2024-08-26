@@ -4,6 +4,13 @@
 #include <thread>
 #include "audio_common.h"
 #include "AudioEffect.h"
+#include "vector"
+#include "jni.h"
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <cstring>
 
 class EchoAudioEngine {
 
@@ -30,6 +37,9 @@ public:
     void startPlayer(const char *path);
 
     void stopPlayer();
+
+    JavaVM* javaVM = nullptr;
+    jobject jObj = nullptr;
 
     aaudio_data_callback_result_t dataToPlayCallback(AAudioStream *stream,
                                                      void *audioData,
@@ -67,8 +77,11 @@ private:
     std::mutex restartingLock_;
     AudioEffect audioEffect_;
 
+    std::vector<short> recordedSamples;
     // region new
     int udpSocket = -1;
+    struct sockaddr_in serverAddress;
+
 
     // endregion
 
@@ -107,6 +120,9 @@ private:
     void setupPlaybackStreamParameters(AAudioStreamBuilder *builder, bool isOnlyPlaying);
 
     void warnIfNotLowLatency(AAudioStream *stream);
+
+    JNIEnv *getJNIEnv();
+    void sendDataToJava(const void* audioData, size_t numFrames);
 
 };
 

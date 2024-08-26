@@ -2,24 +2,24 @@ package com.chris.twain;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
+import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import java.io.File;
 
-public class MainActivity extends Activity
+public class MainActivity extends AppCompatActivity
         implements ActivityCompat.OnRequestPermissionsResultCallback {
 
     private static final String TAG = MainActivity.class.getName();
@@ -43,6 +43,7 @@ public class MainActivity extends Activity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        supportRequestWindowFeature(Window.FEATURE_NO_TITLE);    // 不显示标题栏
         setContentView(R.layout.activity_main);
         recordCacheFilePath = getCacheDir().getAbsolutePath() + "/recordAudio.wav";
         Log.i(TAG, "recording path " + recordCacheFilePath);
@@ -87,16 +88,10 @@ public class MainActivity extends Activity
 
         btnRecord = findViewById(R.id.button_recording);
         btnReplay = findViewById(R.id.button_replay);
-        btnRecord.setOnTouchListener(new View.OnTouchListener() {
+        btnRecord.setOnClickListener(new View.OnClickListener() {
             @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                    case MotionEvent.ACTION_UP:
-                        startRecording();
-                        break;
-                }
-                return true;
+            public void onClick(View v) {
+                startRecording();
             }
         });
 
@@ -132,6 +127,9 @@ public class MainActivity extends Activity
         });
 
         EchoEngine.create();
+        EchoEngine.setAudioCallBack(data -> {
+            UDPHelper.getInstance().addVoiceData(data);
+        });
     }
 
     @Override
@@ -143,6 +141,7 @@ public class MainActivity extends Activity
     @Override
     protected void onDestroy() {
         EchoEngine.delete();
+        UDPHelper.getInstance().stop();
         super.onDestroy();
     }
 

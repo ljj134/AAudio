@@ -105,3 +105,15 @@ Java_com_chris_twain_EchoEngine_stopPlayer(JNIEnv *env, jclass clazz) {
     engine->stopPlayer();
 }
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_chris_twain_EchoEngine_setAudioCallBackObject(JNIEnv *env, jclass thiz,
+                                                 jobject call_back) {
+    engine->jObj = env->NewGlobalRef(call_back);
+    if (engine->jObj) {
+       env->GetJavaVM(&engine->javaVM);
+    } else {
+        LOGE("jObj is null");
+    }
+}
